@@ -105,10 +105,10 @@ def test_rejects_a_lossy_chunk_shorter_than_its_q_base(tmp_path):
 
 
 def test_rejects_coded_bytes_that_end_before_the_last_sample(tmp_path):
-    # the X-E3 vector decodes to its block's first 6 rows, and has too few bytes for 12
+    # the X-E3 vector decodes to its block's first 24 rows, and has too few bytes for 48
     v = json.loads((FIXTURES / "vectors.json").read_text())[0]
     chunk = (FIXTURES / f"{v['name']}.chunk").read_bytes()
-    rejects("the coded bytes end before the stripe's last sample", chunk, v["configuration"], (12, 768), tmp_path)
+    rejects("the coded bytes end before the stripe's last sample", chunk, v["configuration"], (48, 768), tmp_path)
 
 
 def test_rejects_a_code_of_its_tables_values_or_more(tmp_path):

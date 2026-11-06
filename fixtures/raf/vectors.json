@@ -1,5 +1,5 @@
 [
-  {"name": "xe3_lossless_xtrans_b0_h6", "configuration": {"bits": 14, "lossless": true, "cfa": [[1, 1, 0, 1, 1, 2], [1, 1, 2, 1, 1, 0], [2, 0, 1, 0, 2, 1], [1, 1, 2, 1, 1, 0], [1, 1, 0, 1, 1, 2], [0, 2, 1, 2, 0, 1]]}, "shape": [6, 768]},
-  {"name": "gfx50sii_lossy_bayer_b0_h12", "configuration": {"bits": 14, "lossless": false, "cfa": [[0, 1], [1, 2]]}, "shape": [12, 768]},
-  {"name": "gfx100s_lossy_bayer16_b0_h6", "configuration": {"bits": 16, "lossless": false, "cfa": [[0, 1], [1, 2]]}, "shape": [6, 768]}
+  {"name": "xe3_lossless_xtrans_b0_h24", "configuration": {"bits": 14, "lossless": true, "cfa": [[1, 1, 0, 1, 1, 2], [1, 1, 2, 1, 1, 0], [2, 0, 1, 0, 2, 1], [1, 1, 2, 1, 1, 0], [1, 1, 0, 1, 1, 2], [0, 2, 1, 2, 0, 1]]}, "shape": [24, 768]},
+  {"name": "gfx50sii_lossy_bayer_b0_h24", "configuration": {"bits": 14, "lossless": false, "cfa": [[0, 1], [1, 2]]}, "shape": [24, 768]},
+  {"name": "gfx100s_lossy_bayer16_b0_h24", "configuration": {"bits": 16, "lossless": false, "cfa": [[0, 1], [1, 2]]}, "shape": [24, 768]}
 ]

@@ -1,0 +1,121 @@
+{
+  "source_model": "raf",
+  "version": 1,
+  "about": "The source model of a Fujifilm RAF file (spec/zarrify/raf.md §5.3 <https://github.com/d-v-b/refkv/blob/main/spec/zarrify/raf.md#53-elements>): the elements a parser emits, and the roles the file, its regions, its metadata records, its CFA region's TIFF, its strip and a compressed strip's stripes play, each with the constraints a file must meet to have the RAF convention's layout (spec/zarrify/raf.md §8 <https://github.com/d-v-b/refkv/blob/main/spec/zarrify/raf.md#8-raf-profile>). The parser checks them in this order; projections read a valid IR and check nothing.",
+  "limits": {
+    "max_safe": 9007199254740991,
+    "header": 132,
+    "max_records": 255,
+    "max_records_length": 1048576,
+    "stripe": 768,
+    "max_height": 16386
+  },
+  "tables": {},
+  "elements": {
+    "about": "The IR of a RAF file. J, M and C are the embedded JPEG's, the metadata records' and the CFA region's offsets, from the directory; s the strip's offset in the CFA region (tag 0xF007).",
+    "header": {"kind": "value", "type": "the 132-byte header as one record: magic cstr[16], format_version cstr[4], camera_id cstr[8], camera cstr[32], directory_version cstr[4], reserved bytes[20], directory >u4[12]", "extent": "(0, 132)"},
+    "jpeg": {"kind": "value", "type": "bytes[n]", "extent": "(J, n), when its length n is not 0: the embedded JPEG, opaque, never read"},
+    "metadata": {"kind": "value", "type": "bytes[n]", "extent": "(M, n): the metadata records"},
+    "cfa_tiff": {"kind": "value", "type": "bytes[s]", "extent": "(C, s): the CFA region up to its strip, its TIFF"},
+    "samples": {"kind": "data", "form": "{geometry: {data_type: uint16, samples: 1}, codec: {endian}, recipe: [[src, 0, null]]}", "extent": "(C + s, 2 w h), of an uncompressed strip"},
+    "stripe_header": {"kind": "value", "type": "bytes[16]", "extent": "(C + s, 16), of a compressed strip"},
+    "stripe_tables": {"kind": "value", "type": "bytes[t]", "extent": "(C + s + 16, t): the blocks' sizes and, of a lossy strip, the q_base runs"},
+    "stripes": {"kind": "data", "form": "{geometry: {data_type: uint16, shape: [h, w]}, codec: {refkv.fuji_compressed: configuration, sizes}, recipe: [[src, 0, null]]}", "extent": "(C + s + 16 + t, the blocks' sizes' sum), of a compressed strip"},
+    "gaps/<offset>": {"kind": "gap", "about": "bytes no element claims"}
+  },
+  "roles": {
+    "file": {
+      "given": {"size": "the file's size"},
+      "constraints": [
+        {"require": "size >= header", "message": "file too short for a 132-byte RAF header"}
+      ]
+    },
+    "region": {
+      "given": {"name": "the region's name", "offset": "its offset, from the directory", "length": "its length", "size": "the file's size"},
+      "constraints": [
+        {"require": "length == 0 || (offset >= header && offset + length <= size)", "message": "the {name} of {length} bytes at {offset} is outside the {size}-byte file past its header"}
+      ]
+    },
+    "overlap": {
+      "given": {"a": "a region's name", "a_offset": "its offset", "b": "another's", "b_offset": "its offset", "apart": "whether they share no byte"},
+      "constraints": [
+        {"require": "apart", "message": "the {a} at {a_offset} and the {b} at {b_offset} overlap"}
+      ]
+    },
+    "second_frame": {
+      "given": {"offset": "the directory's word 11, a second frame's CFA region"},
+      "constraints": [
+        {"require": "offset == 0", "message": "a second frame, its CFA region at {offset} (an EXR or SuperCCD camera's), which the profile does not read"}
+      ]
+    },
+    "records_length": {
+      "given": {"length": "the metadata records' length"},
+      "constraints": [
+        {"require": "length >= 4 && length <= max_records_length", "message": "metadata records of {length} bytes, not from 4 to 1048576"}
+      ]
+    },
+    "records": {
+      "given": {"count": "the records' count", "inside": "whether every record lies within the records' bytes", "length": "their length"},
+      "constraints": [
+        {"require": "count <= max_records", "message": "{count} metadata records, more than 255"},
+        {"require": "inside", "message": "the {count} metadata records run past their {length} bytes"}
+      ]
+    },
+    "cfa_tiff": {
+      "given": {"offset": "the CFA region's offset", "tiff": "whether it starts with a TIFF header and IFD 0", "raw_ifd": "whether IFD 0 has a raw IFD (tag 0xF000) within the region's first 65536 bytes"},
+      "constraints": [
+        {"require": "tiff", "message": "the CFA region at {offset} is not a TIFF (an older FinePix camera's bare samples), which the profile does not read"},
+        {"require": "raw_ifd", "message": "the CFA region's TIFF has no raw IFD (tag 0xF000) within its first 65536 bytes"}
+      ]
+    },
+    "raw_tag": {
+      "given": {"name": "the tag's meaning", "tag": "the tag, in hexadecimal", "present": "whether the raw IFD has it, one SHORT or LONG"},
+      "constraints": [
+        {"require": "present", "message": "the raw IFD has no {name} (tag {tag}, one SHORT or LONG)"}
+      ]
+    },
+    "strip": {
+      "given": {"offset": "the strip's offset in the CFA region (0xF007)", "bytes": "its byte count (0xF008)", "region": "the CFA region's length", "head": "the bytes of the region the profile reads first"},
+      "constraints": [
+        {"require": "offset >= 8 && offset <= head && offset + 16 <= region", "message": "the strip at {offset} of the {region}-byte CFA region is not within its first 65536 bytes, after its TIFF header, with 16 bytes"}
+      ]
+    },
+    "encoding": {
+      "given": {"compressed": "whether the strip starts with a compressed strip's header (IS)", "bytes": "the strip's byte count", "samples": "w h", "width": "w (0xF001)", "height": "h (0xF002)", "per": "bytes / samples, to 2 places"},
+      "constraints": [
+        {"require": "compressed || (samples >= 1 && samples <= max_safe && bytes == 2 * samples)", "message": "a {bytes}-byte strip of {width} × {height} samples, {per} bytes a sample: packed samples, which the profile does not read"}
+      ]
+    },
+    "samples": {
+      "given": {"end": "the strip's offset plus 2 w h, exactly", "end_shown": "end in decimal", "region_end": "the CFA region's end"},
+      "constraints": [
+        {"require": "end <= region_end", "message": "the uncompressed samples end at {end_shown}, past the CFA region's end at {region_end}"}
+      ]
+    },
+    "stripes": {
+      "given": {"lossless": "the stripe header's byte 2", "raw_type": "byte 3", "bits": "byte 4", "height": "bytes 5-6", "rounded_width": "bytes 7-8", "width": "bytes 9-10", "block": "bytes 11-12", "blocks": "byte 13", "groups": "bytes 14-15", "tiff_width": "0xF001", "tiff_height": "0xF002"},
+      "constraints": [
+        {"require": "lossless <= 1", "message": "a compressed strip's lossless flag {lossless}, neither 0 nor 1"},
+        {"require": "raw_type == 0 || raw_type == 16", "message": "a compressed strip of raw type {raw_type}, neither 0 (Bayer) nor 16 (X-Trans)"},
+        {"require": "bits == 12 || bits == 14 || bits == 16", "message": "a compressed strip of {bits}-bit samples, not 12, 14 or 16"},
+        {"require": "block == stripe", "message": "a compressed strip of {block}-column blocks, not 768"},
+        {"require": "height >= 6 && height <= max_height && int(height / 6) && groups == height / 6", "message": "a compressed strip of {height} rows in {groups} row groups: not a multiple of 6 from 6 to 16386, 6 rows a group"},
+        {"require": "blocks >= 1 && rounded_width == blocks * block && width >= 1 && width <= rounded_width && rounded_width - width < block", "message": "a compressed strip {width} wide in {blocks} blocks of {block}, rounded to {rounded_width}"},
+        {"require": "width == tiff_width && height == tiff_height", "message": "a compressed strip of {width} × {height} samples in a raw IFD of {tiff_width} × {tiff_height}"}
+      ]
+    },
+    "xtrans_pattern": {
+      "given": {"valid": "whether metadata record 0x0131 is present, of 36 bytes, each 0, 1 or 2"},
+      "constraints": [
+        {"require": "valid", "message": "an X-Trans strip without its pattern (metadata record 0x0131 of 36 bytes, each 0, 1 or 2)"}
+      ]
+    },
+    "stripe_data": {
+      "given": {"fits": "whether the strip's tables lie within the CFA region", "tables": "their bytes", "end": "the end of the last stripe, exactly", "end_shown": "end in decimal", "region_end": "the CFA region's end"},
+      "constraints": [
+        {"require": "fits", "message": "a compressed strip's {tables} bytes of tables run past the CFA region's end at {region_end}"},
+        {"require": "end <= region_end", "message": "the compressed stripes end at {end_shown}, past the CFA region's end at {region_end}"}
+      ]
+    }
+  }
+}

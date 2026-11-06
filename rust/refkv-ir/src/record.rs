@@ -35,7 +35,7 @@ pub fn width(kind: &str) -> usize {
     match kind {
         "u1" => 1,
         "i2" => 2,
-        "i4" | "f4" => 4,
+        "i4" | "u4" | "f4" => 4,
         _ => 8,
     }
 }

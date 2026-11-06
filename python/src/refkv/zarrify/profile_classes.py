@@ -173,6 +173,14 @@ class QptiffSource(Source):
 
 
 @dataclass(frozen=True)
+class RafSource(Source):
+    """Fujifilm RAF: a file the `raf` profile reads, its first bytes untested (`Source` lists
+    its read options)."""
+
+    profile: ClassVar[str] = "raf"
+
+
+@dataclass(frozen=True)
 class SafeSource(Source):
     """Sentinel-2 SAFE (Level-1C, Level-2A): a file the `safe` profile reads, its first bytes
     untested (`Source` lists its read options)."""
@@ -266,6 +274,7 @@ CLASSES: dict[str, type[Source | Store]] = {
     "OmeZarrStore": OmeZarrStore,
     "PrecomputedStore": PrecomputedStore,
     "QptiffSource": QptiffSource,
+    "RafSource": RafSource,
     "SafeSource": SafeSource,
     "SafeStore": SafeStore,
     "SafetensorsSource": SafetensorsSource,
@@ -298,6 +307,7 @@ __all__ = [
     "OmeZarrStore",
     "PrecomputedStore",
     "QptiffSource",
+    "RafSource",
     "SafeSource",
     "SafeStore",
     "SafetensorsSource",

@@ -39,6 +39,7 @@ who each one is for, what you get, and how to run it.
 | OME-Zarr | OME-Zarr 0.4 hierarchies, migrated to OME-Zarr 0.5 in place | [ome-zarr](ome-zarr/README.md) | [ome-zarr.md §11](../../spec/zarrify/ome-zarr.md#11-ome-zarr-profile) |
 | Neuroglancer precomputed | connectomics volumes in Neuroglancer's precomputed format, including shards too many to scan | [precomputed](precomputed/README.md) | [precomputed.md §11](../../spec/zarrify/precomputed.md#11-neuroglancer-precomputed-profile) |
 | QPTIFF | Akoya (PerkinElmer) Vectra multiplex scans and inForm component data | [qptiff](qptiff/README.md) | [qptiff.md §7](../../spec/zarrify/qptiff.md#7-qptiff-profile) |
+| Fujifilm RAF | Fujifilm raw photos, compressed or 16-bit uncompressed (`.raf`) | [raf](raf/README.md) | [raf.md §8](../../spec/zarrify/raf.md#8-raf-profile) |
 | Sentinel-2 SAFE | Sentinel-2 Level-1C and Level-2A products, as a `.SAFE` directory or a `.SAFE.zip` | [safe](safe/README.md) | [safe.md §8](../../spec/zarrify/safe.md#8-safe-profile) |
 | safetensors | machine learning model weights in safetensors files (`.safetensors`), each tensor an array, and a model's shards as one group | [safetensors](safetensors/README.md) | [safetensors.md §8](../../spec/zarrify/safetensors.md#8-safetensors-profile) |
 | TIFF | OME-TIFF, plain TIFF (tiled or in strips), and JPEG-tiled slides such as Aperio SVS | [tiff](tiff/README.md) | [tiff.md §7](../../spec/zarrify/tiff.md#7-tiff-profile) |
@@ -344,6 +345,11 @@ each format's metadata is:
   the data type, the axis map and the voxel size. The archive also holds the
   file as a dataset for xarray under `dataset/`, declared by its own
   convention ([conventions §9](../../spec/conventions.md#9-dataset-layouts)).
+- **RAF:** the IR mirror on `refkv_source`: the header, the embedded JPEG,
+  the metadata records, the CFA region's TIFF and the sensor data. The root
+  keeps the header and its directory, every metadata record, the TIFF's IFDs,
+  and, for compressed data, the stripes' header and the pattern the codec
+  places samples by ([raf §5](../../spec/zarrify/raf.md#5-source-metadata)).
 - **LIF, LOF and LIFEXT:** the IR mirror on `refkv_source`: the XML header, every memory
   block (an image's or not) and any bytes after them. The root keeps the
   file's version; each image keeps its element of the XML (its name, its path

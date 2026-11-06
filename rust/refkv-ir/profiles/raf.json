@@ -1,0 +1,17 @@
+{
+  "name": "raf",
+  "title": "Fujifilm RAF",
+  "uuid": "53faefeb-140e-454f-b960-72ecae5170c0",
+  "version": 0,
+  "kind": "file",
+  "store_run": null,
+  "sniff": 105,
+  "chosen_by": null,
+  "suffixes": [
+    ".raf"
+  ],
+  "reference": null,
+  "source": "Fujifilm RAF",
+  "inputs": "Fujifilm RAF files of compressed (lossless or lossy) or 16-bit uncompressed sensor data, Bayer or X-Trans",
+  "for": "Fujifilm raw photos, compressed or 16-bit uncompressed (`.raf`)"
+}

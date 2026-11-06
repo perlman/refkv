@@ -41,6 +41,7 @@ EVERY_CODEC = {
     "refkv.fits_tiles": ("fits/fits_comp_gzip1.fits", "1"),
     "refkv.skip": ("npy/npz_compressed.npz", "fortran"),
     "refkv.grib": ("grib/grib_simple.grib2", "grid0/t_surface"),
+    "refkv.fuji_compressed": ("raf/raf_lossy_bayer.raf", "0"),
     "refkv.precomputed": ("precomputed/precomputed_raw_clipped", "0"),
     "refkv.h5_bitshuffle": ("hdf5/hdf5_third_party.h5", "bitshuffle_lz4"),
     "imagecodecs_lzf": ("hdf5/hdf5_filters.h5", "lzf"),

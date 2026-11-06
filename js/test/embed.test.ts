@@ -165,9 +165,9 @@ test("decodes refkv.fuji_compressed chunks to rawpy's samples", async () => {
 });
 
 test("rejects a refkv.fuji_compressed chunk whose coded bytes end too soon", async () => {
-  // the X-E3 vector has bytes for its block's first 6 rows, not 12
+  // the X-E3 vector has bytes for its block's first 24 rows, not 48
   const [{ name, configuration }] = JSON.parse(new TextDecoder().decode(fixture("raf/vectors.json")));
-  await assert.rejects(decodeFujiCompressed(fixture(`raf/${name}.chunk`), configuration, [12, 768]),
+  await assert.rejects(decodeFujiCompressed(fixture(`raf/${name}.chunk`), configuration, [48, 768]),
     /^Error: refkv\.fuji_compressed: the coded bytes end before the stripe's last sample$/);
   await assert.rejects(decodeFujiCompressed(new Uint8Array(0), { bits: 14, lossless: true, cfa: [[0, 1], [1, 2]] }, [8, 768]),
     /^Error: refkv\.fuji_compressed: the chunk shape \[8, 768\] is not 1 along/);

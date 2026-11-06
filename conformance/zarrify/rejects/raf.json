@@ -1,0 +1,120 @@
+{
+  "about": "The inputs the raf profile rejects, each with the start of its message (the Rust tests' prefix, or what each store test's message contains), and, where the Python host rejects it earlier, the host's message. rust/refkv-ir/build.rs writes a Rust test per case into tests/raf.rs; python/tests/ir/test_rejects.py checks each through the host and that every rejected fixture is listed here.",
+  "cases": [
+    {
+      "test": "raf_reject_short",
+      "input": "raf_reject_short.raf",
+      "message": "file too short for a 132-byte RAF header"
+    },
+    {
+      "test": "raf_reject_region_outside",
+      "input": "raf_reject_region_outside.raf",
+      "message": "the metadata records of 1048576 bytes at 214 is outside the 6634-byte file past its header"
+    },
+    {
+      "test": "raf_reject_overlap",
+      "input": "raf_reject_overlap.raf",
+      "message": "the embedded JPEG at 148 and the metadata records at 214 overlap"
+    },
+    {
+      "test": "raf_reject_second_frame",
+      "input": "raf_reject_second_frame.raf",
+      "message": "a second frame, its CFA region at 4096 (an EXR or SuperCCD camera's), which the profile does not read"
+    },
+    {
+      "test": "raf_reject_records_length",
+      "input": "raf_reject_records_length.raf",
+      "message": "metadata records of 2 bytes, not from 4 to 1048576"
+    },
+    {
+      "test": "raf_reject_records_count",
+      "input": "raf_reject_records_count.raf",
+      "message": "300 metadata records, more than 255"
+    },
+    {
+      "test": "raf_reject_records_past",
+      "input": "raf_reject_records_past.raf",
+      "message": "the 2 metadata records run past their 12 bytes"
+    },
+    {
+      "test": "raf_reject_not_tiff",
+      "input": "raf_reject_not_tiff.raf",
+      "message": "the CFA region at 235 is not a TIFF (an older FinePix camera's bare samples), which the profile does not read"
+    },
+    {
+      "test": "raf_reject_no_raw_ifd",
+      "input": "raf_reject_no_raw_ifd.raf",
+      "message": "the CFA region's TIFF has no raw IFD (tag 0xF000) within its first 65536 bytes"
+    },
+    {
+      "test": "raf_reject_raw_tag",
+      "input": "raf_reject_raw_tag.raf",
+      "message": "the raw IFD has no bits (tag 0xF003, one SHORT or LONG)"
+    },
+    {
+      "test": "raf_reject_strip",
+      "input": "raf_reject_strip.raf",
+      "message": "the strip at 4 of the 6236-byte CFA region is not within its first 65536 bytes, after its TIFF header, with 16 bytes"
+    },
+    {
+      "test": "raf_reject_packed",
+      "input": "raf_reject_packed.raf",
+      "message": "a 4608-byte strip of 64 × 48 samples, 1.50 bytes a sample: packed samples, which the profile does not read"
+    },
+    {
+      "test": "raf_reject_samples_past",
+      "input": "raf_reject_samples_past.raf",
+      "message": "the uncompressed samples end at 6634, past the CFA region's end at 6632"
+    },
+    {
+      "test": "raf_reject_lossless_flag",
+      "input": "raf_reject_lossless_flag.raf",
+      "message": "a compressed strip's lossless flag 2, neither 0 nor 1"
+    },
+    {
+      "test": "raf_reject_raw_type",
+      "input": "raf_reject_raw_type.raf",
+      "message": "a compressed strip of raw type 1, neither 0 (Bayer) nor 16 (X-Trans)"
+    },
+    {
+      "test": "raf_reject_bits",
+      "input": "raf_reject_bits.raf",
+      "message": "a compressed strip of 10-bit samples, not 12, 14 or 16"
+    },
+    {
+      "test": "raf_reject_block",
+      "input": "raf_reject_block.raf",
+      "message": "a compressed strip of 512-column blocks, not 768"
+    },
+    {
+      "test": "raf_reject_height",
+      "input": "raf_reject_height.raf",
+      "message": "a compressed strip of 7 rows in 4 row groups: not a multiple of 6 from 6 to 16386, 6 rows a group"
+    },
+    {
+      "test": "raf_reject_width",
+      "input": "raf_reject_width.raf",
+      "message": "a compressed strip 769 wide in 1 blocks of 768, rounded to 768"
+    },
+    {
+      "test": "raf_reject_size_mismatch",
+      "input": "raf_reject_size_mismatch.raf",
+      "message": "a compressed strip of 768 × 24 samples in a raw IFD of 744 × 24"
+    },
+    {
+      "test": "raf_reject_xtrans_pattern",
+      "input": "raf_reject_xtrans_pattern.raf",
+      "message": "an X-Trans strip without its pattern (metadata record 0x0131 of 36 bytes, each 0, 1 or 2)"
+    },
+    {
+      "test": "raf_reject_tables_past",
+      "input": "raf_reject_tables_past.raf",
+      "message": "a compressed strip's 16 bytes of tables run past the CFA region's end at 554"
+    },
+    {
+      "test": "raf_reject_stripes_past",
+      "input": "raf_reject_stripes_past.raf",
+      "message": "the compressed stripes end at 20331, past the CFA region's end at 20330"
+    }
+  ]
+}

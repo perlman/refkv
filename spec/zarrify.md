@@ -53,6 +53,7 @@ The table, generated from the registry, lists them:
 | [OME-Zarr](zarrify/ome-zarr.md#part-2-the-profile) | store | OME-Zarr 0.4 hierarchies on Zarr v2, migrated to OME-Zarr 0.5 |
 | [Neuroglancer precomputed](zarrify/precomputed.md#part-2-the-profile) | store | Neuroglancer precomputed volumes, unsharded or with identity-hashed shards |
 | [QPTIFF](zarrify/qptiff.md#part-2-the-profile) | file | Akoya (PerkinElmer) Vectra QPTIFF slides and inForm component data, a TIFF with an XML description per image, in LZW, JPEG or uncompressed tiles or strips |
+| [Fujifilm RAF](zarrify/raf.md#part-2-the-profile) | file | Fujifilm RAF files of compressed (lossless or lossy) or 16-bit uncompressed sensor data, Bayer or X-Trans |
 | [Sentinel-2 SAFE](zarrify/safe.md#part-2-the-profile) | file or store | Sentinel-2 Level-1C and Level-2A products: a `.SAFE` directory (a store) or a `.SAFE.zip` file |
 | [safetensors](zarrify/safetensors.md#part-2-the-profile) | file or store | safetensors files of a model's tensors (`model.safetensors`), in every data type the library defines, `BF16`, `F8_*`, `F4` and `F6_*` included; and stores of them, such as a model's repository of shards with its index |
 | [TIFF](zarrify/tiff.md#part-2-the-profile) | file | TIFF and BigTIFF, including OME-TIFF across files, Micro-Manager stacks and JPEG-tiled slides such as Aperio SVS |
@@ -234,6 +235,7 @@ profile name:
 | NIfTI ([nifti.md §7](zarrify/nifti.md#7-nifti-profile)) | 60 |
 | NumPy ([npy.md §8](zarrify/npy.md#8-numpy-profile)) | 75 |
 | NRRD ([nrrd.md §8](zarrify/nrrd.md#8-nrrd-profile)) | 95 |
+| Fujifilm RAF ([raf.md §8](zarrify/raf.md#8-raf-profile)) | 105 |
 | Sentinel-2 SAFE ([safe.md §8](zarrify/safe.md#8-safe-profile)) | 80 |
 | safetensors ([safetensors.md §8](zarrify/safetensors.md#8-safetensors-profile)) | 35 |
 | TIFF ([tiff.md §7](zarrify/tiff.md#7-tiff-profile)) | 40 |
@@ -1041,6 +1043,7 @@ else. The profiles, generated from the registry:
 - the OME-Zarr profile: [spec/zarrify/ome-zarr.md §11](zarrify/ome-zarr.md#11-ome-zarr-profile);
 - the Neuroglancer precomputed profile: [spec/zarrify/precomputed.md §11](zarrify/precomputed.md#11-neuroglancer-precomputed-profile);
 - the QPTIFF profile: [spec/zarrify/qptiff.md §7](zarrify/qptiff.md#7-qptiff-profile);
+- the RAF profile: [spec/zarrify/raf.md §8](zarrify/raf.md#8-raf-profile);
 - the SAFE profile: [spec/zarrify/safe.md §8](zarrify/safe.md#8-safe-profile);
 - the safetensors profile: [spec/zarrify/safetensors.md §8](zarrify/safetensors.md#8-safetensors-profile);
 - the TIFF profile: [spec/zarrify/tiff.md §7](zarrify/tiff.md#7-tiff-profile);

@@ -1,0 +1,7 @@
+# url|name|no-ref of the public RAF files in the corpus (the frozen reference has no RAF profile, so each
+# compares py with web alone), from raw.pixls.us (CC0): an X-E3 file (lossless, X-Trans, 14 bits), a GFX 50S II
+# file (lossy, Bayer, 14 bits), a GFX100S file (lossy, Bayer, 16 bits), and an X-E2 file (uncompressed, 16 bits)
+https://raw.pixls.us/download/data/Fujifilm/X-E3/DSCF2176.RAF|raf_xe3_lossless_xtrans|no-ref
+https://raw.pixls.us/download/data/Fujifilm/GFX50S%20II/Fuji_GFX50S_II_-_Compressed.RAF|raf_gfx50sii_lossy_bayer|no-ref
+https://raw.pixls.us/download/data/Fujifilm/GFX100S/Fujifilm-GFX100S-16bits-compress-4_3.RAF|raf_gfx100s_lossy_bayer16|no-ref
+https://raw.pixls.us/download/data/Fujifilm/X-E2/DSCF9050.RAF|raf_xe2_uncompressed|no-ref
