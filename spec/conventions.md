@@ -1824,3 +1824,137 @@ chunk's length is the message's.
    to nearest.
 
 The codec has no encoder.
+
+## 13. Fujifilm compressed stripes
+
+A Fujifilm RAF file's compressed sensor data, lossless or lossy, is a stripe after stripe of 768
+columns of the sensor, each over its full height and coded on its own. A stripe codes the red,
+green and blue samples of each group of 6 rows in lines of their own, each sample predicted from the
+samples above and beside it in its color, its residual coded with an adaptive Golomb–Rice code. The
+array-to-bytes codec `refkv.fuji_compressed` decodes one stripe. The stripe's header and table of
+sizes, and the file around it, are the RAF profile's.
+
+**The codec.** `{"name": "refkv.fuji_compressed", "configuration": C}`, where `C` is a
+<a id="type-fujicompressedconfiguration"></a>**`FujiCompressedConfiguration`**:
+
+| member | type | presence | value |
+|---|---|---|---|
+| `bits` | integer | required | the samples' bits `b`: 12, 14 or 16 |
+| `lossless` | boolean | required | `true` for a lossless stripe, `false` for a lossy one |
+| `cfa` | array of array of integer | required | the color of each position of the sensor's pattern, by row, from the chunk's first row and column: 0 red, 1 green, 2 blue. 2 rows of 2 for a Bayer stripe, 6 rows of 6 for an X-Trans stripe |
+
+There are no other members. The array's data type is `uint16`. A chunk's shape is 1 along every
+dimension but its last two, which are `h` and 768, where `h` is a multiple of 6 from 6 to 16,386.
+`n = h / 6` is the number of row groups. `M = 2^b − 1` is the largest sample.
+
+**A chunk's bytes.** For a lossless stripe, the stripe's coded bytes. For a lossy one, first
+`16 × ⌈n / 16⌉` bytes of which the first `n` are the stripe's `q_base` of each row group in order,
+then the stripe's coded bytes.
+
+**Decoding a chunk.** Integer arithmetic throughout. `⌊x / y⌋` is the floor of a quotient, and
+`L(x)`, for `x` ≥ 1, is the number of binary digits of `x − 1`, but at least 1.
+
+1. **Lines.** A stripe's samples of one color in one row are a **line** of `W` samples: `W = 384`
+   for a Bayer stripe, and `W = 512` for an X-Trans stripe. Each line has `W + 2` entries, numbered
+   from 0. The sample at position `x` (from 0) is at entry `x + 1`, and entries 0 and `W + 1` hold
+   copies from the line above. The decoder keeps 18 lines, named `R0`–`R4`, `G0`–`G7` and `B0`–`B4`,
+   all zero at the start of a chunk. For the line `Ci` (color `C`, number `i`), the **line above**
+   is `C(i − 1)` and the line **two above** is `C(i − 2)`. Lines `R2`–`R4`, `G2`–`G7` and `B2`–`B4`
+   are decoded, and the others are kept from the previous row group.
+2. **Bits.** The coded bytes are read as bits, the most significant bit of each byte first.
+   `zeros()` reads bits up to and including the first 1, and is the number of 0s before it.
+   `read(k)` is the next `k` bits as an unsigned integer, the first most significant, and `read(0)`
+   is 0. The bits past the coded bytes' end read as 0. A decoding that reads all 8 bits of the byte
+   after the end is an error. LibRaw's decoder allows that many, and no more.
+3. **Quantization tables.** A table has a step `q`, five thresholds `p0`–`p4`, a multiplier `m`, a
+   number of values `T`, raw bits `r = L(T)`, and, for the lossy extra tables, a gradient limit `g`.
+   Its quantization `Q(v)`, for `−M` ≤ `v` ≤ `M`, is the first of these that holds: −4 when
+   `v ≤ −p3`; −3 when `v ≤ −p2`; −2 when `v ≤ −p1`; −1 when `v < −p0`; 0 when `v ≤ p0`; 1 when
+   `v < p1`; 2 when `v < p2`; 3 when `v < p3`; and 4 otherwise.
+   - The **main table** of a step `q`: thresholds `(q, 3q + 18, 5q + 67, 7q + 276, M)`, `m = 9` and
+     `T = ⌊(M + 2q) / (2q + 1)⌋ + 1`. A lossless stripe uses the main table of step 0 throughout.
+     A lossy stripe uses that of the row group's `q_base`.
+   - The three **extra tables** of a lossy stripe, `k` = 1, 2, 3, with `m = 3`:
+
+     | `k` | `q` | thresholds | `T` | `g` |
+     |---|---|---|---|---|
+     | 1 | 0 | `(0, 18, 67, 276, M)` | `M + 1` | 5 |
+     | 2 | 1 | `(1, 21, 72, 283, M)` | `⌊(M + 2) / 3⌋ + 1` | 6 |
+     | 3 | 2 | `(2, 24, 77, 290, M)` | `⌊(M + 4) / 5⌋ + 1` | 7 |
+
+4. **Contexts.** A context is a pair of integers `(A, N)`. A table's contexts start at
+   `A = max(2, ⌊(T + 32) / 64⌋)` and `N = 1`, with `T` that table's. There are six **sets** of
+   contexts: one for each of 3 groups, each for even and for odd positions. Each set holds 41
+   contexts of the main table and, for a lossy stripe, 5 of each extra table.
+   - A lossless stripe starts every context at the start of the chunk.
+   - A lossy stripe starts the extra tables' contexts at the start of the chunk. It starts the main
+     table's contexts at row group 0, and again at every row group whose `q_base` differs from the
+     row group before it, using that group's main table.
+5. **A coded sample** at position `x` of a line `Ci`, of parity even or odd, with a set of contexts.
+   Let `U` be the line above and `V` the line two above, and `e = x + 1`. Then `b = U[e]`,
+   `c = U[e − 1]` and `d = U[e + 1]`; for an even position `f = V[e]`, and for an odd one
+   `a = Ci[e − 1]` and `g' = Ci[e + 1]`. The odd position's right neighbor is already decoded,
+   since the evens lead the odds (step 7).
+   1. **The table.** The main table and its contexts in the set. For a lossy stripe, the first `k`
+      from 1 to `min(3, q)` (`q` the main table's step) whose `g` is at least the sum, which is
+      `|f − b| + |c − b|` at an even position and `|b − c| + |c − a|` at an odd one, chooses extra
+      table `k` and its contexts in the set instead.
+   2. **The gradient.** `G = m × Q(v1) + Q(v2)`, with the chosen table's `m` and `Q`, where `v1 = b − f`
+      and `v2 = c − b` at an even position, and `v1 = b − c` and `v2 = c − a` at an odd one. The
+      context is the set's `|G|`th context of the table. `|G|` is at most 40, or 4 for an extra
+      table.
+   3. **The prediction** `P`. At an even position: `⌊(f + d + 2b) / 4⌋` when `|c − b|` exceeds both
+      `|f − b|` and `|d − b|`; otherwise `⌊(f + c + 2b) / 4⌋` when `|d − b|` exceeds both `|c − b|`
+      and `|f − b|`; otherwise `⌊(d + c + 2b) / 4⌋`. At an odd position: `⌊(g' + a + 2b) / 4⌋` when
+      `b` is greater than both `c` and `d`, or less than both; otherwise `⌊(a + g') / 2⌋`.
+   4. **The code.** `s = zeros()`. When `s < 4b − r − 1` (`b` the bits, `r` the table's raw bits),
+      `k` is 0 if `N ≥ A`. Otherwise `k` is the least of 1 to 15 for which `N × 2^k ≥ A`, or 15
+      if none is. The code is then `s × 2^k + read(k)`. When `s` is larger, the code is
+      `read(r) + 1`. A code of `T` or more is an error. LibRaw counts it as a data error and goes
+      on.
+   5. **The residual** `E`: `code / 2` for an even code, and `−(code + 1) / 2` for an odd one.
+      The context becomes `A + |E|`, then, if `N` is 64, both are halved (`⌊A / 2⌋`, 32), and then
+      `N` increases by 1.
+   6. **The sample.** `v = P + E × (2q + 1)` when `G ≥ 0`, and `P − E × (2q + 1)` when `G < 0`,
+      with the chosen table's `q`. Then `v` gains `T × (2q + 1)` when `v < −q`, or loses it when
+      `v > q + M`. The sample is 0 when `v < 0`, and `min(v, M)` otherwise.
+6. **An interpolated sample** (X-Trans stripes only) at an even position reads no bits and uses no
+   context: it is the prediction `P` of an even position, from the same `b`, `c`, `d` and `f`.
+7. **A row group** is six passes. Each pass decodes two lines, a first and a second, with a group of
+   contexts:
+
+   | pass | first | second | group | X-Trans: even positions interpolated |
+   |---|---|---|---|---|
+   | 1 | `R2` | `G2` | 0 | all of `R2` |
+   | 2 | `G3` | `B2` | 1 | all of `B2` |
+   | 3 | `R3` | `G4` | 2 | those of `R3` with `x mod 4 = 0`, and all of `G4` |
+   | 4 | `G5` | `B3` | 0 | those of `B3` with `x mod 4 = 2` |
+   | 5 | `R4` | `G6` | 1 | those of `R4` with `x mod 4 = 2` |
+   | 6 | `G7` | `B4` | 2 | all of `G7`, and those of `B4` with `x mod 4 = 0` |
+
+   Every other position is a coded sample, with the even or odd set of the pass's group. A pass
+   repeats these two steps until every position of both lines is decoded:
+   1. if an even position of the lines remains, the next even position (0, 2, …) of the first line,
+      then the same position of the second;
+   2. if at least five even positions of each line are done, the next odd position (1, 3, …) of the
+      first line, then the same position of the second.
+
+   After each pass, for each color the pass decoded, the lines of that color from number 2 to its
+   last (`R4`, `G7` or `B4`) are extended in increasing order: each line's entry 0 becomes entry 1
+   of the line above, and its entry `W + 1` becomes entry `W` of the line above.
+8. **The rows.** After the six passes, `R0` becomes a copy of `R3`, `R1` of `R4`, `G0` of `G6`,
+   `G1` of `G7`, `B0` of `B3` and `B1` of `B4`. Then row group `j` gives the chunk's rows `6j` to
+   `6j + 5`. Row `6j + t`, at column `x` from 0 to 767, has the color `C` of `cfa` at row `t mod 2`
+   and column `x mod 2` for a Bayer stripe, or at row `t` and column `x mod 6` for an X-Trans one.
+   Its value is entry `i + 1` of line `R(2 + ⌊t / 2⌋)`, `G(2 + t)` or `B(2 + ⌊t / 2⌋)` for red,
+   green or blue. `i = ⌊x / 2⌋` for a Bayer stripe. For an X-Trans one, `i = 2⌊x / 3⌋` when
+   `x mod 3 = 0`, and `2⌊x / 3⌋ + 1` otherwise.
+9. **The next row group.** Lines `R2`–`R4`, `G2`–`G7` and `B2`–`B4` become zero. Then each of `R2`,
+   `G2` and `B2` takes entry 0 from entry 1 of the line above, and entry `W + 1` from its entry `W`.
+
+A chunk's coded bytes may end before the decoder's last read, within the limit of step 2. The
+decoded value does not depend on the chunk's position: 768 is a multiple of 6, so the pattern starts
+over at every stripe. The last stripe of a file whose width is not a multiple of 768 decodes to all
+768 columns like any other, and the array's shape excludes the columns past its width.
+
+The codec has no encoder.
