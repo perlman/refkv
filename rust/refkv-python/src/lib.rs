@@ -862,6 +862,19 @@ fn fits_tiles_decode<'py>(py: Python<'py>, chunk: &[u8], config: &str, chunk_sha
     Ok(PyBytes::new(py, &out))
 }
 
+/// The `refkv.fuji_compressed` codec (spec/conventions.md §13
+/// <https://github.com/d-v-b/refkv/blob/main/spec/conventions.md#13-fujifilm-compressed-stripes>):
+/// the samples of a stripe of a Fujifilm RAF file's compressed sensor data, as little-endian
+/// uint16 in C order over `chunk_shape`, from the chunk's bytes and the codec's configuration
+/// (JSON).
+#[pyfunction]
+fn fuji_compressed_decode<'py>(py: Python<'py>, chunk: &[u8], config: &str, chunk_shape: Vec<u64>) -> PyResult<Bound<'py, PyBytes>> {
+    let cfg: serde_json::Value = serde_json::from_str(config).map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let cfg = refkv_ir::fuji_compressed::Config::from_json(&cfg).map_err(PyValueError::new_err)?;
+    let out = py.detach(|| refkv_ir::fuji_compressed::decode(chunk, &cfg, &chunk_shape)).map_err(PyValueError::new_err)?;
+    Ok(PyBytes::new(py, &bytes_of(&out, u16::to_le_bytes)))
+}
+
 /// The `refkv.h5_bitshuffle` codec (spec/zarrify/hdf5.md §3.4
 /// <https://github.com/d-v-b/refkv/blob/main/spec/zarrify/hdf5.md#34-the-codec-refkvh5_bitshuffle>): a chunk's bytes
 /// from HDF5's bitshuffle filter, its elements of `elementsize` bytes, in blocks of `block_size`
@@ -932,6 +945,7 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(sniff, m)?)?;
     m.add_function(wrap_pyfunction!(registry, m)?)?;
     m.add_function(wrap_pyfunction!(fits_tiles_decode, m)?)?;
+    m.add_function(wrap_pyfunction!(fuji_compressed_decode, m)?)?;
     m.add_function(wrap_pyfunction!(h5_bitshuffle_decode, m)?)?;
     m.add_function(wrap_pyfunction!(grib_decode, m)?)?;
     m.add_function(wrap_pyfunction!(_set_copy_threshold, m)?)?;

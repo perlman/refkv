@@ -266,6 +266,12 @@ def fits_tiles_decode(chunk: bytes, config: str, chunk_shape: Sequence[int]) -> 
     chunk's pixels, as little-endian bytes of the array's data type in C order over
     `chunk_shape`, from the chunk's bytes and the codec's configuration (JSON). Raises
     ValueError for a bad configuration or chunk."""
+def fuji_compressed_decode(chunk: bytes, config: str, chunk_shape: Sequence[int]) -> bytes:
+    """The `refkv.fuji_compressed` codec (spec/conventions.md §13
+    <https://github.com/d-v-b/refkv/blob/main/spec/conventions.md#13-fujifilm-compressed-stripes>):
+    the samples of a stripe of a Fujifilm RAF file's compressed sensor data, as little-endian
+    uint16 in C order over `chunk_shape`, from the chunk's bytes and the codec's configuration
+    (JSON). Raises ValueError for a bad configuration, chunk shape or stripe."""
 def grib_decode(chunk: bytes, config: str, chunk_shape: Sequence[int]) -> bytes:
     """The `refkv.grib` codec (spec/conventions.md §12
     <https://github.com/d-v-b/refkv/blob/main/spec/conventions.md#12-grib-messages>): the values

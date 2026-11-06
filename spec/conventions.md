@@ -321,6 +321,7 @@ of each step, and always one of step 3.
 | 3 | `{"name": "imagecodecs_packints", "configuration": {"bitspersample": b, "runlen": n}}` | samples of `b` bits, most significant first, in rows of `n` samples each starting on a whole byte, into the data type |
 | 3 | `{"name": "imagecodecs_ccittfax4"}` | CCITT Group 4 (ITU-T T.6): one stream per chunk, decoding to the chunk's `[y, x]`, a coded black run 1 and a white one 0 |
 | 3 | `{"name": "imagecodecs_eer", "configuration": {"shape": [h, w], "skipbits": s, "horzbits": a, "vertbits": b}}` | Electron Event Representation: one frame per chunk, of that shape, decoding to one bit a pixel |
+| 3 | `{"name": "refkv.fuji_compressed", "configuration": {"bits": b, "lossless": l, "cfa": [...]}}` | a stripe of a Fujifilm RAF file's compressed sensor data, lossless or lossy: one stripe per chunk, decoding to the chunk's `[y, x]` of `uint16`, 768 columns wide ([§13](#13-fujifilm-compressed-stripes)) |
 | 4 | `{"name": "imagecodecs_packbits"}` | the bytes are TIFF PackBits streams ([tiff §4.3](zarrify/tiff.md#43-data-types-and-codecs)), run-length coded, unlike the zarr-extensions' `packbits` |
 | 4 | `{"name": "numcodecs.zlib", "configuration": {"level": 1}}` | the bytes are zlib streams (RFC 1950) |
 | 4 | `{"name": "imagecodecs_lzw"}` | the bytes are TIFF LZW streams (TIFF 6.0 §13: codes packed most significant bit first, with the "early change"), each decoding whole to exactly the chunk's bytes |
@@ -372,6 +373,7 @@ core writes:
 | `numcodecs.zlib` | zarr-python | zarr-python |  |
 | `packbits` | zarr-extensions | refkv |  |
 | `refkv.fits_tiles` | refkv | refkv | [fits §3.3](zarrify/fits.md#33-tile-compressed-images) |
+| `refkv.fuji_compressed` | refkv | refkv | [§13](#13-fujifilm-compressed-stripes) |
 | `refkv.grib` | refkv | refkv | [§12](#12-grib-messages) |
 | `refkv.h5_bitshuffle` | refkv | refkv | [hdf5 §3.4](zarrify/hdf5.md#34-the-codec-refkvh5_bitshuffle) |
 | `refkv.precomputed` | refkv | refkv | [precomputed §6](zarrify/precomputed.md#6-the-codec-refkvprecomputed) |

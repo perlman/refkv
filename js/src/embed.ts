@@ -1,10 +1,10 @@
 // refkv's zarrifier for a host that reads the input itself, such as a viewer's worker (the
-// Neuroglancer fork's `refkv:` kvstore), and the decoders of the `refkv.fits_tiles` and
-// `refkv.grib` codecs, all the Rust core's: the input file, read through the host's own reads, or
-// the store at an http(s) URL, zarrified by the Rust core (spec/zarrify.md
-// <https://github.com/d-v-b/refkv/blob/main/spec/zarrify.md>) and written as a vzip archive
-// (spec/refkv.md <https://github.com/d-v-b/refkv/blob/main/spec/refkv.md>), which the host reads
-// as any other. build.mjs bundles this module, with what it imports, as refkv_embed.js, beside
+// Neuroglancer fork's `refkv:` kvstore), and the decoders of the `refkv.fits_tiles`,
+// `refkv.fuji_compressed` and `refkv.grib` codecs, all the Rust core's: the input file, read
+// through the host's own reads, or the store at an http(s) URL, zarrified by the Rust core
+// (spec/zarrify.md <https://github.com/d-v-b/refkv/blob/main/spec/zarrify.md>) and written as a
+// vzip archive (spec/refkv.md <https://github.com/d-v-b/refkv/blob/main/spec/refkv.md>), which
+// the host reads as any other. build.mjs bundles this module, with what it imports, as refkv_embed.js, beside
 // refkv_ir.wasm; the host says where that is with `setIrWasmUrl`, or
 // gives the module itself with `setIrWasmModule`.
 
@@ -90,6 +90,33 @@ export async function decodeFitsTiles(chunk: Uint8Array, configuration: unknown,
     const n = Number(w.vz_fits_tiles_decode(pc, chunk.length, pg, config.length, ps, shape.length));
     if (n < 0) throw new Error(`refkv.fits_tiles: ${new TextDecoder().decode(out(w, -n))}`);
     return out(w, n);
+  } finally {
+    w.vz_free(pc, chunk.length);
+    w.vz_free(pg, config.length);
+    w.vz_free(ps, dims.length);
+  }
+}
+
+/** Decodes a chunk of the `refkv.fuji_compressed` codec (spec/conventions.md §13
+ * <https://github.com/d-v-b/refkv/blob/main/spec/conventions.md#13-fujifilm-compressed-stripes>),
+ * a stripe of a Fujifilm RAF file's compressed sensor data, with the codec's `configuration` into
+ * the `uint16` samples of the chunk shape `shape`, as the Rust core decodes it (refkv.zarr's codec
+ * too). */
+export async function decodeFujiCompressed(chunk: Uint8Array, configuration: unknown, shape: number[]): Promise<Uint16Array> {
+  const w = await ir();
+  const config = new TextEncoder().encode(JSON.stringify(configuration));
+  const dims = new Uint8Array(shape.length * 8);
+  shape.forEach((n, i) => new DataView(dims.buffer).setBigUint64(i * 8, BigInt(n), true));
+  const pc = put(w, chunk);
+  const pg = put(w, config);
+  const ps = put(w, dims);
+  try {
+    const n = Number(w.vz_fuji_compressed_decode(pc, chunk.length, pg, config.length, ps, shape.length));
+    // the core's messages start with "refkv.fuji_compressed: "
+    if (n < 0) throw new Error(new TextDecoder().decode(out(w, -n)));
+    const bytes = out(w, n);
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    return Uint16Array.from({ length: n / 2 }, (_, i) => view.getUint16(2 * i, true));
   } finally {
     w.vz_free(pc, chunk.length);
     w.vz_free(pg, config.length);

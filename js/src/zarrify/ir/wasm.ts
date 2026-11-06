@@ -6,8 +6,8 @@
 
 import { compileIr } from "#irwasm";
 
-/** The C-ABI of rust/refkv-ir/src/wasm.rs that the runs, and the `refkv.fits_tiles` and
- * `refkv.grib` codecs, use. */
+/** The C-ABI of rust/refkv-ir/src/wasm.rs that the runs, and the `refkv.fits_tiles`,
+ * `refkv.fuji_compressed` and `refkv.grib` codecs, use. */
 export interface IrExports {
   memory: WebAssembly.Memory;
   vz_alloc(n: number): number;
@@ -35,6 +35,7 @@ export interface IrExports {
   vz_store_free(p: number): void;
   vz_free(p: number, n: number): void;
   vz_fits_tiles_decode(chunk: number, n: number, config: number, nc: number, shape: number, rank: number): bigint;
+  vz_fuji_compressed_decode(chunk: number, n: number, config: number, nc: number, shape: number, rank: number): bigint;
   vz_grib_decode(chunk: number, n: number, config: number, nc: number, shape: number, rank: number): bigint;
 }
 

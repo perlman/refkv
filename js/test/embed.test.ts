@@ -1,14 +1,15 @@
 // The embeddable zarrifier (src/embed.ts): a file the host reads itself is zarrified as
 // zarrifySource does, its VSI tile files opened through the host, with or without its
 // sources' size pins; a refkv.fits_tiles chunk decodes as refkv.zarr's codec decodes it (the
-// same Rust core), and a refkv.grib chunk to eccodes' values; and one test per way either fails.
+// same Rust core), a refkv.grib chunk to eccodes' values, and a refkv.fuji_compressed chunk to
+// rawpy's; and one test per way each fails.
 
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import { test } from "node:test";
 import { Archive } from "../src/archive.ts";
-import { decodeFitsTiles, decodeGrib, type FileInput, zarrifyToArchive } from "../src/embed.ts";
+import { decodeFitsTiles, decodeFujiCompressed, decodeGrib, type FileInput, zarrifyToArchive } from "../src/embed.ts";
 import { ImageError } from "../src/zarrify/common.ts";
 import { zarrifySource } from "../src/zarrify/index.ts";
 import { bytesSource } from "../src/zarrify/ir/source.ts";
@@ -150,4 +151,24 @@ test("rejects a refkv.grib chunk of a packing it does not decode", async () => {
   m[cod + 13] = 0;
   await assert.rejects(decodeGrib(m, {}, [12, 16]),
     /^Error: refkv\.grib: a JPEG 2000 codestream of the irreversible 9\/7 wavelet transform is not decoded$/);
+});
+
+test("decodes refkv.fuji_compressed chunks to rawpy's samples", async () => {
+  // the first row groups of real stripes (fixtures/raf/README.md)
+  const vectors = JSON.parse(new TextDecoder().decode(fixture("raf/vectors.json")));
+  for (const { name, configuration, shape } of vectors) {
+    const e = fixture(`raf/${name}.expected`);
+    const want = Uint16Array.from({ length: e.length / 2 }, (_, i) => e[2 * i] | (e[2 * i + 1] << 8));
+    assert.deepEqual(await decodeFujiCompressed(fixture(`raf/${name}.chunk`), configuration, shape), want, name);
+  }
+  assert.equal(vectors.length, 3);
+});
+
+test("rejects a refkv.fuji_compressed chunk whose coded bytes end too soon", async () => {
+  // the X-E3 vector has bytes for its block's first 6 rows, not 12
+  const [{ name, configuration }] = JSON.parse(new TextDecoder().decode(fixture("raf/vectors.json")));
+  await assert.rejects(decodeFujiCompressed(fixture(`raf/${name}.chunk`), configuration, [12, 768]),
+    /^Error: refkv\.fuji_compressed: the coded bytes end before the stripe's last sample$/);
+  await assert.rejects(decodeFujiCompressed(new Uint8Array(0), { bits: 14, lossless: true, cfa: [[0, 1], [1, 2]] }, [8, 768]),
+    /^Error: refkv\.fuji_compressed: the chunk shape \[8, 768\] is not 1 along/);
 });

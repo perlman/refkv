@@ -65,6 +65,31 @@ pub unsafe extern "C" fn vz_fits_tiles_decode(chunk: *const u8, n: usize, config
     }
 }
 
+/// The `refkv.fuji_compressed` codec (spec/conventions.md §13
+/// <https://github.com/d-v-b/refkv/blob/main/spec/conventions.md#13-fujifilm-compressed-stripes>):
+/// decodes the stripe at `chunk` (`n` bytes) with the configuration JSON at `config` (`nc`
+/// bytes) into the samples of the chunk shape at `shape` (`rank` little-endian u64), in
+/// `vz_out`: their length, as little-endian uint16, or minus a message's.
+///
+/// # Safety
+/// The pointers come from `vz_alloc` with those lengths.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn vz_fuji_compressed_decode(chunk: *const u8, n: usize, config: *const u8, nc: usize, shape: *const u8, rank: usize) -> i64 {
+    let chunk = unsafe { std::slice::from_raw_parts(chunk, n) };
+    let config = unsafe { std::slice::from_raw_parts(config, nc) };
+    let shape = unsafe { std::slice::from_raw_parts(shape, rank * 8) };
+    let shape: Vec<u64> = shape.chunks(8).map(|b| u64::from_le_bytes(b.try_into().unwrap())).collect();
+    let decoded = std::str::from_utf8(config)
+        .map_err(|e| e.to_string())
+        .and_then(|s| serde_json::from_str::<serde_json::Value>(s).map_err(|e| e.to_string()))
+        .and_then(|v| crate::fuji_compressed::Config::from_json(&v))
+        .and_then(|cfg| crate::fuji_compressed::decode(chunk, &cfg, &shape));
+    match decoded {
+        Ok(v) => set_out(v.iter().flat_map(|x| x.to_le_bytes()).collect()) as i64,
+        Err(e) => -(set_out(e.into_bytes()) as i64),
+    }
+}
+
 /// The `refkv.grib` codec (spec/conventions.md §12
 /// <https://github.com/d-v-b/refkv/blob/main/spec/conventions.md#12-grib-messages>): decodes the
 /// GRIB message at `chunk` (`n` bytes) with the configuration JSON at `config` (`nc` bytes) into
