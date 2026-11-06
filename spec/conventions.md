@@ -1841,13 +1841,13 @@ sizes, and the file around it, are the RAF profile's.
 
 | member | type | presence | value |
 |---|---|---|---|
-| `bits` | integer | required | the samples' bits `b`: 12, 14 or 16 |
+| `bits` | integer | required | the samples' bits: 12, 14 or 16 |
 | `lossless` | boolean | required | `true` for a lossless stripe, `false` for a lossy one |
 | `cfa` | array of array of integer | required | the color of each position of the sensor's pattern, by row, from the chunk's first row and column: 0 red, 1 green, 2 blue. 2 rows of 2 for a Bayer stripe, 6 rows of 6 for an X-Trans stripe |
 
 There are no other members. The array's data type is `uint16`. A chunk's shape is 1 along every
 dimension but its last two, which are `h` and 768, where `h` is a multiple of 6 from 6 to 16,386.
-`n = h / 6` is the number of row groups. `M = 2^b − 1` is the largest sample.
+`n = h / 6` is the number of row groups. `M = 2^bits − 1` is the largest sample.
 
 **A chunk's bytes.** For a lossless stripe, the stripe's coded bytes. For a lossy one, first
 `16 × ⌈n / 16⌉` bytes of which the first `n` are the stripe's `q_base` of each row group in order,
@@ -1904,14 +1904,15 @@ then the stripe's coded bytes.
    2. **The gradient.** `G = m × Q(v1) + Q(v2)`, with the chosen table's `m` and `Q`, where `v1 = b − f`
       and `v2 = c − b` at an even position, and `v1 = b − c` and `v2 = c − a` at an odd one. The
       context is the set's `|G|`th context of the table. `|G|` is at most 40, or 4 for an extra
-      table.
+      table: the limit `g` that chose it keeps `|v1|` and `|v2|` below its `p1`, so each `Q` is −1,
+      0 or 1.
    3. **The prediction** `P`. At an even position: `⌊(f + d + 2b) / 4⌋` when `|c − b|` exceeds both
       `|f − b|` and `|d − b|`; otherwise `⌊(f + c + 2b) / 4⌋` when `|d − b|` exceeds both `|c − b|`
       and `|f − b|`; otherwise `⌊(d + c + 2b) / 4⌋`. At an odd position: `⌊(g' + a + 2b) / 4⌋` when
       `b` is greater than both `c` and `d`, or less than both; otherwise `⌊(a + g') / 2⌋`.
-   4. **The code.** `s = zeros()`. When `s < 4b − r − 1` (`b` the bits, `r` the table's raw bits),
-      `k` is 0 if `N ≥ A`. Otherwise `k` is the least of 1 to 15 for which `N × 2^k ≥ A`, or 15
-      if none is. The code is then `s × 2^k + read(k)`. When `s` is larger, the code is
+   4. **The code.** `s = zeros()`. When `s < 4 × bits − r − 1` (`r` the table's raw bits), `z` is
+      0 if `N ≥ A`. Otherwise `z` is the least of 1 to 15 for which `N × 2^z ≥ A`, or 15 if none
+      is. The code is then `s × 2^z + read(z)`. When `s` is larger, the code is
       `read(r) + 1`. A code of `T` or more is an error. LibRaw counts it as a data error and goes
       on.
    5. **The residual** `E`: `code / 2` for an even code, and `−(code + 1) / 2` for an odd one.
@@ -1952,7 +1953,8 @@ then the stripe's coded bytes.
    green or blue. `i = ⌊x / 2⌋` for a Bayer stripe. For an X-Trans one, `i = 2⌊x / 3⌋` when
    `x mod 3 = 0`, and `2⌊x / 3⌋ + 1` otherwise.
 9. **The next row group.** Lines `R2`–`R4`, `G2`–`G7` and `B2`–`B4` become zero. Then each of `R2`,
-   `G2` and `B2` takes entry 0 from entry 1 of the line above, and entry `W + 1` from its entry `W`.
+   `G2` and `B2` takes entry 0 from entry 1 of the line above, and entry `W + 1` from entry `W` of
+   the line above.
 
 A chunk's coded bytes may end before the decoder's last read, within the limit of step 2. The
 decoded value does not depend on the chunk's position: 768 is a multiple of 6, so the pattern starts
